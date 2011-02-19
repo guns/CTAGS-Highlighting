@@ -26,19 +26,30 @@ if !exists('g:CTagsHighlighterDebug')
 	let g:CTagsHighlighterDebug = g:DBG_None
 endif
 
+func! s:GetOption(name, default)
+	let opt = a:default
+	if exists('g:' . a:name)
+		exe 'let opt = g:' . a:name
+	endif
+	if exists('b:' . a:name)
+		exe 'let opt = b:' . a:name
+	endif
+	return opt
+endfunction
+
 " These should only be included if editing a wx or qt file
 " They should also be updated to include all functions etc, not just
 " typedefs
-let g:wxTypesFile = escape(globpath(&rtp, "types_wx.vim"), '\,')
-let g:qtTypesFile = escape(globpath(&rtp, "types_qt4.vim"), '\,')
-let g:wxPyTypesFile = escape(globpath(&rtp, "types_wxpy.vim"), '\,')
-let g:jdkTypesFile = escape(globpath(&rtp, "types_jdk.vim"), '\,')
-let g:androidTypesFile = escape(globpath(&rtp, "types_android.vim"), '\,')
+let g:wxTypesFile = escape(globpath(&rtp, s:GetOption('TypesPrefix', 'types') . '_wx.vim'), '\,')
+let g:qtTypesFile = escape(globpath(&rtp, s:GetOption('TypesPrefix', 'types') . '_qt4.vim'), '\,')
+let g:wxPyTypesFile = escape(globpath(&rtp, s:GetOption('TypesPrefix', 'types') . '_wxpy.vim'), '\,')
+let g:jdkTypesFile = escape(globpath(&rtp, s:GetOption('TypesPrefix', 'types') . '_jdk.vim'), '\,')
+let g:androidTypesFile = escape(globpath(&rtp, s:GetOption('TypesPrefix', 'types') . '_android.vim'), '\,')
 
 " These should only be included if editing a wx or qt file
-let g:wxTagsFile = escape(globpath(&rtp, 'tags_wx'), ' \,')
-let g:qtTagsFile = escape(globpath(&rtp, 'tags_qt4'), ' \,')
-let g:wxPyTagsFile = escape(globpath(&rtp, 'tags_wxpy'), ' \,')
+let g:wxTagsFile = escape(globpath(&rtp, s:GetOption('TypesCTagsFile', 'tags') . '_wx'), ' \,')
+let g:qtTagsFile = escape(globpath(&rtp, s:GetOption('TypesCTagsFile', 'tags') . '_qt4'), ' \,')
+let g:wxPyTagsFile = escape(globpath(&rtp, s:GetOption('TypesCTagsFile', 'tags') . '_wxpy'), ' \,')
 
 " Update types & tags - called with a ! recurses
 command! -bang -bar UpdateTypesFile silent call UpdateTypesFile(<bang>0, 0) | 
@@ -118,19 +129,19 @@ function! ReadTypes(suffix)
 			return
 		endif
 	endif
-	let fname = expand(file . ':p:h') . '/types_' . a:suffix . '.vim'
+	let fname = expand(file . ':p:h') . '/' . s:GetOption('TypesPrefix', 'types') . '_' . a:suffix . '.vim'
 	call s:Debug_Print(g:DBG_Information, "Checking for file " . fname)
 	if filereadable(fname)
 		call s:Debug_Print(g:DBG_Information, "Found")
 		exe 'so ' . fname
 	endif
-	let fname = expand(file . ':p:h:h') . '/types_' . a:suffix . '.vim'
+	let fname = expand(file . ':p:h:h') . '/' . s:GetOption('TypesPrefix', 'types') . '_' . a:suffix . '.vim'
 	call s:Debug_Print(g:DBG_Information, "Checking for file " . fname)
 	if filereadable(fname)
 		call s:Debug_Print(g:DBG_Information, "Found")
 		exe 'so ' . fname
 	endif
-	let fname = 'types_' . a:suffix . '.vim'
+	let fname = '/' . s:GetOption('TypesPrefix', 'types') . '_' . a:suffix . '.vim'
 	call s:Debug_Print(g:DBG_Information, "Checking for file " . fname)
 	if filereadable(fname)
 		call s:Debug_Print(g:DBG_Information, "Found")
@@ -276,17 +287,6 @@ func! s:FindExePath(file)
 	return file_path
 endfunc
 
-func! s:GetOption(name, default)
-	let opt = a:default
-	if exists('g:' . a:name)
-		exe 'let opt = g:' . a:name
-	endif
-	if exists('b:' . a:name)
-		exe 'let opt = b:' . a:name
-	endif
-	return opt
-endfunction
-
 func! UpdateTypesFile(recurse, skiptags)
 	let s:vrc = globpath(&rtp, "mktypes.py")
 
@@ -337,6 +337,9 @@ func! UpdateTypesFile(recurse, skiptags)
 	elseif a:skiptags == 1
 		let syscmd .= ' --use-existing-tagfile'
 	endif
+
+	let syscmd .= ' --ctags-file ' . s:GetOption('TypesCTagsFile', 'tags')
+	let syscmd .= ' --types-prefix ' . s:GetOption('TypesPrefix', 'types')
 
 	let CheckForCScopeFiles = s:GetOption('CheckForCScopeFiles', 0)
 	if CheckForCScopeFiles == 1
